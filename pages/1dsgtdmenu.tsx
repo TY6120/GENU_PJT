@@ -70,7 +70,7 @@ const dayMenus: Record<
         kcal: 300,
       },
       {
-        type: "夜食",
+        type: "夕食",
         menu: "鶏胸肉スープ、シーザーサラダ",
         ingredients: "鶏胸肉、レタス、シーザードレッシング",
         recipe: ["鶏胸肉を茹でてスープにする", "レタスにドレッシングをかける"],
