@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Logo from "@/components/Logo";
+import { useRouter } from "next/router";
+import { supabase } from "@/lib/supabase";
 
 export default function MyPageEdit() {
-  // 仮の初期値
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [height, setHeight] = useState("");
@@ -11,19 +12,137 @@ export default function MyPageEdit() {
   const [bodyFat, setBodyFat] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ─────────────────────────────────────────
+  // (1) 初回描画時：supabase.auth.getUser() → currentphysical_infos を maybeSingle() で取得
+  // ─────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      // ① Supabase Auth からログイン中のユーザーを取得
+      const {
+        data: { user: authUser },
+        error: getUserError,
+      } = await supabase.auth.getUser();
+
+      if (getUserError || !authUser) {
+        setError("ログイン情報の取得に失敗しました");
+        router.push("/signin");
+        return;
+      }
+      const userId = authUser.id;
+
+      // ② currentphysical_infos を maybeSingle() で取得
+      //    これによりレコードがない場合でもエラー (406) にならず、data は null になる
+      const {
+        data: physData,
+        error: physError,
+      } = await supabase
+        .from("currentphysical_infos")
+        .select("age, gender, height, weight, bodyfat")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (physError) {
+        setError("既存データの取得中にエラーが発生しました");
+        return;
+      }
+
+      // ③ 既存レコードがあれば、フォームに初期値をセット
+      if (physData) {
+        setAge(String(physData.age));
+        setGender(physData.gender);
+        setHeight(String(physData.height));
+        setWeight(String(physData.weight));
+        setBodyFat(String(physData.bodyfat));
+      }
+    })();
+  }, [router]);
+
+  // ─────────────────────────────────────────
+  // (2) フォーム送信時の INSERT または UPDATE
+  // ─────────────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    // ① 入力チェック
     if (!age || !gender || !height || !weight || !bodyFat) {
       setError("全ての項目を入力してください");
       return;
     }
+
+    // ② supabase.auth.getUser() で再度 userId を取得
+    const {
+      data: { user: authUser },
+      error: getUserError,
+    } = await supabase.auth.getUser();
+    if (getUserError || !authUser) {
+      setError("ログイン情報の取得に失敗しました");
+      return;
+    }
+    const userId = authUser.id;
+
+    // ③ maybeSingle() で currentphysical_infos に既存行があるかチェック
+    const {
+      data: existData,
+      error: existError,
+    } = await supabase
+      .from("currentphysical_infos")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existError) {
+      setError("既存データの確認中にエラーが発生しました");
+      return;
+    }
+
+    let result;
+    if (existData) {
+      // ── UPDATE ──
+      // 既存行があるので、updated_at を現在時刻にしてレコードを更新する
+      result = await supabase
+        .from("currentphysical_infos")
+        .update({
+          age: Number(age),
+          gender,
+          height: Number(height),
+          weight: Number(weight),
+          bodyfat: Number(bodyFat),
+          updated_at: new Date().toISOString(), // テーブルに追加済み
+        })
+        .eq("user_id", userId);
+    } else {
+      // ── INSERT ──
+      // 既存行がないときは新規登録：created_at と updated_at をセットする
+      result = await supabase.from("currentphysical_infos").insert([
+        {
+          user_id: userId,
+          age: Number(age),
+          gender,
+          height: Number(height),
+          weight: Number(weight),
+          bodyfat: Number(bodyFat),
+          created_at: new Date().toISOString(), // テーブルに追加済み
+          updated_at: new Date().toISOString(), // テーブルに追加済み
+        },
+      ]);
+    }
+
+    if (result.error) {
+      setError("保存に失敗しました: " + result.error.message);
+      return;
+    }
+
     setSuccess("編集が完了しました！");
-    // ここでAPIリクエストを実装してください
+    setTimeout(() => router.push("/mypage"), 1000);
   };
 
+  // ─────────────────────────────────────────
+  // (3) JSX：フォーム描画部分（省略なしで全体を再掲）
+  // ─────────────────────────────────────────
   return (
     <div
       style={{

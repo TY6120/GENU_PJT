@@ -1,24 +1,104 @@
+// pages/mypage.tsx
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NavigationBar from "@/components/NavigationBar";
 import Logo from "@/components/Logo";
 import { useRouter } from "next/router";
+import { supabase } from "@/lib/supabase";
 
 export default function MyPage() {
-  // 仮のユーザーデータ
-  const [user] = useState({
-    age: 30,
-    gender: "男性",
-    height: 180.1,
-    weight: 78.0,
-    bodyFat: 20.0,
+  // state の初期値は「何も登録されていない → 0 や空文字」で OK
+  const [user, setUser] = useState({
+    age: 0,
+    gender: "",
+    height: 0,
+    weight: 0,
+    bodyFat: 0,
   });
-  // 仮の理想データ
-  const [ideal] = useState({
-    weight: 78.0,
-    bodyFat: 20.0,
+  const [ideal, setIdeal] = useState({
+    weight: 0,
+    bodyFat: 0,
   });
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      // ───────────────────────────────────────────────────
+      // ① Supabase Auth の現在ログイン中セッションを取得
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      // 未ログイン or session.user が取れない場合はサインインへリダイレクト
+      if (!session || !session.user) {
+        router.push("/signin");
+        return;
+      }
+
+      // 以降、「supabase.auth.signInWithPassword」でログインしたユーザーの情報を使う
+      const authUser = session.user; // { id: string; email: string; … }
+
+      // ───────────────────────────────────────────────────
+      // ② public.users テーブルから id(uuid) を取得
+      //    signup.tsx / signin.tsx の段階で必ず users テーブルにレコードを入れている想定
+      const { data: userRow, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", authUser.email)
+        .single();
+
+      if (userError || !userRow) {
+        console.error("🚫 users テーブルからのユーザーID取得エラー", userError);
+        return;
+      }
+      const userId = userRow.id;
+
+      try {
+        // ───────────────────────────────────────────────────
+        // ③ currentphysical_infos テーブルから「現在の身体情報」を取得
+        const { data: bodyData, error: bodyError } = await supabase
+          .from("currentphysical_infos")
+          .select("*")
+          .eq("user_id", userId)
+          .single();
+
+        if (!bodyError && bodyData) {
+          setUser({
+            age: bodyData.age,
+            gender: bodyData.gender,
+            // PostgreSQL の numeric は JS では string で返ってくる場合があるので Number() する
+            height: Number(bodyData.height),
+            weight: Number(bodyData.weight),
+            bodyFat: Number(bodyData.bodyfat),
+          });
+        } else {
+          console.warn("⚠️ currentphysical_infos に該当レコードなし or 取得エラー", bodyError);
+        }
+
+        // ───────────────────────────────────────────────────
+        // ④ idealphysical_infos テーブルから「理想の身体情報」を取得
+        const { data: idealData, error: idealError } = await supabase
+          .from("idealphysical_infos")
+          .select("*")
+          .eq("user_id", userId)
+          .single();
+
+        if (!idealError && idealData) {
+          setIdeal({
+            weight: Number(idealData.weight),
+            bodyFat: Number(idealData.bodyfat),
+          });
+        } else {
+          console.warn("⚠️ idealphysical_infos に該当レコードなし or 取得エラー", idealError);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUserData();
+    // router はリダイレクト用に依存関係に入れる。session を外したので空配列でも OK。
+  }, [router]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff" }}>
@@ -28,6 +108,7 @@ export default function MyPage() {
       </div>
       {/* ナビゲーションバー */}
       <NavigationBar />
+
       {/* タイトル */}
       <div style={{ width: "100%", maxWidth: 1200, margin: "0 auto" }}>
         <h2
@@ -42,7 +123,8 @@ export default function MyPage() {
         >
           マイページ
         </h2>
-        {/* 情報カード2カラム */}
+
+        {/* 情報カード２カラム */}
         <div
           style={{
             width: "100%",
@@ -146,6 +228,7 @@ export default function MyPage() {
               現在の情報を編集
             </button>
           </div>
+
           {/* 理想の身体情報カード */}
           <div
             style={{

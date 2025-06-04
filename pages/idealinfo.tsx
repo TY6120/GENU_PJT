@@ -2,23 +2,73 @@
 import { useState } from "react";
 import NavigationBar from "@/components/NavigationBar";
 import Logo from "@/components/Logo";
+import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 export default function IdealInfo() {
   const [weight, setWeight] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const router = useRouter();
+  const { data: session } = useSession();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    // Supabase Authから直接ユーザー情報を取得
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      setError("ユーザーIDの取得に失敗しました");
+      return;
+    }
+    const userId = userData.user.id;
+
     if (!weight || !bodyFat) {
       setError("全ての項目を入力してください");
       return;
     }
+
+    let result;
+    // 既存レコードがあるか確認
+    const { data: exist } = await supabase
+      .from("idealphysical_infos")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+    if (exist) {
+      // update
+      result = await supabase
+        .from("idealphysical_infos")
+        .update({
+          weight: Number(weight),
+          bodyfat: Number(bodyFat),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+    } else {
+      // insert
+      result = await supabase
+        .from("idealphysical_infos")
+        .insert([
+          {
+            user_id: userId,
+            weight: Number(weight),
+            bodyfat: Number(bodyFat),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
+    }
+    if (result.error) {
+      setError("保存に失敗しました: " + result.error.message);
+      return;
+    }
     setSuccess("登録が完了しました！");
-    // ここでAPIリクエストを実装してください
+    setTimeout(() => router.push("/mypage"), 1000);
   };
 
   return (
