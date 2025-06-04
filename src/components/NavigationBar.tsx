@@ -20,7 +20,7 @@ export default function NavigationBar() {
 
   const navStyle = {
     position: "absolute" as const,
-    top: 40,
+    top: 10,
     right: 40,
     display: "flex",
     gap: 12,

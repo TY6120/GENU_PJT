@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Logo from "@/components/Logo";
+import { supabase } from "@/lib/supabase";
 
 export default function Signup() {
   const [userId, setUserId] = useState("");
@@ -16,6 +17,32 @@ export default function Signup() {
     if (!userId || !password) {
       setError("全ての項目を入力してください");
       return;
+    }
+
+    // Supabase Authでサインアップ
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: userId,
+      password: password,
+    });
+    if (signUpError) {
+      setError("サインアップに失敗しました: " + signUpError.message);
+      return;
+    }
+    // usersテーブルにもinsert
+    const authUser = data.user;
+    if (authUser) {
+      const { error: insertError } = await supabase.from("users").insert([
+        {
+          id: authUser.id,
+          email: authUser.email,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
+      if (insertError) {
+        setError("usersテーブルへの登録に失敗しました: " + insertError.message);
+        return;
+      }
     }
     setSuccess("新規登録が完了しました！");
     setTimeout(() => router.push("/signin"), 1500);

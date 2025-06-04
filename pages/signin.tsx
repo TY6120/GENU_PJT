@@ -6,20 +6,31 @@ import Logo from "@/components/Logo";
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (!error) {
-      router.push("/");
-    } else {
-      setError("メールアドレスまたはパスワードが正しくありません");
+    setErrorMessage("");
+    console.log(email, password);
+    try{
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email:email,
+        password:password,
+      });
+      if (error) {
+        // 認証エラーが発生した場合はメッセージをセット
+        setErrorMessage(error.message);
+        return;
+      }
+
+      if (data.session) {
+        // サインインに成功したら、例えばダッシュボードへリダイレクト
+        router.push("/mypage");
+      }
+    }catch(error){
+      console.error(error);
+      setErrorMessage("メールアドレスまたはパスワードが正しくありません");
     }
   };
 
@@ -104,7 +115,7 @@ export default function SignIn() {
             }}
           />
         </div>
-        {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+        {errorMessage && <div style={{ color: "red", marginBottom: 16 }}>{errorMessage}</div>}
         <button
           type="submit"
           style={{
