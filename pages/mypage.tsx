@@ -26,17 +26,17 @@ export default function MyPage() {
       // ───────────────────────────────────────────────────
       // ① Supabase Auth の現在ログイン中セッションを取得
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
       // 未ログイン or session.user が取れない場合はサインインへリダイレクト
-      if (!session || !session.user) {
+      if (!user) {
         router.push("/signin");
         return;
       }
 
       // 以降、「supabase.auth.signInWithPassword」でログインしたユーザーの情報を使う
-      const authUser = session.user; // { id: string; email: string; … }
+      const authUser = user; // { id: string; email: string; … }
 
       // ───────────────────────────────────────────────────
       // ② public.users テーブルから id(uuid) を取得
@@ -72,7 +72,10 @@ export default function MyPage() {
             bodyFat: Number(bodyData.bodyfat),
           });
         } else {
-          console.warn("⚠️ currentphysical_infos に該当レコードなし or 取得エラー", bodyError);
+          console.warn(
+            "⚠️ currentphysical_infos に該当レコードなし or 取得エラー",
+            bodyError,
+          );
         }
 
         // ───────────────────────────────────────────────────
@@ -89,7 +92,10 @@ export default function MyPage() {
             bodyFat: Number(idealData.bodyfat),
           });
         } else {
-          console.warn("⚠️ idealphysical_infos に該当レコードなし or 取得エラー", idealError);
+          console.warn(
+            "⚠️ idealphysical_infos に該当レコードなし or 取得エラー",
+            idealError,
+          );
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
