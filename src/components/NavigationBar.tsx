@@ -33,12 +33,6 @@ export default function NavigationBar() {
       </button>
       <button
         style={buttonStyle}
-        onClick={() => handleNavigation("/idealinfo")}
-      >
-        理想の体型
-      </button>
-      <button
-        style={buttonStyle}
         onClick={() => handleNavigation("/1wsgtdmenu")}
       >
         食事メニュー
