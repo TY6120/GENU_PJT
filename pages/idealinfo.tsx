@@ -1,9 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NavigationBar from "@/components/NavigationBar";
 import Logo from "@/components/Logo";
 import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 
 export default function IdealInfo() {
@@ -12,7 +11,26 @@ export default function IdealInfo() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const router = useRouter();
-  const { data: session } = useSession();
+
+  useEffect(() => {
+    const fetchIdeal = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from("idealphysical_infos")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (!error && data) {
+        setWeight(data.weight?.toString() ?? "");
+        setBodyFat(data.bodyfat?.toString() ?? "");
+      }
+    };
+    fetchIdeal();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,17 +69,15 @@ export default function IdealInfo() {
         .eq("user_id", userId);
     } else {
       // insert
-      result = await supabase
-        .from("idealphysical_infos")
-        .insert([
-          {
-            user_id: userId,
-            weight: Number(weight),
-            bodyfat: Number(bodyFat),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ]);
+      result = await supabase.from("idealphysical_infos").insert([
+        {
+          user_id: userId,
+          weight: Number(weight),
+          bodyfat: Number(bodyFat),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
     }
     if (result.error) {
       setError("保存に失敗しました: " + result.error.message);
