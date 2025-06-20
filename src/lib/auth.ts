@@ -1,13 +1,9 @@
 import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { supabase } from "@/lib/supabase"; // Supabase clientをインポート
 
 export const authOptions: AuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -20,26 +16,32 @@ export const authOptions: AuthOptions = {
           throw new Error("メールアドレスとパスワードを入力してください");
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
+        // Supabaseでユーザーを検索
+        const { data: user, error } = await supabase
+          .from("users") // 'users' テーブルを仮定
+          .select("*")
+          .eq("email", credentials.email)
+          .single();
 
-        if (!user || !user?.hashedPassword) {
+        if (error || !user) {
           throw new Error("ユーザーが見つかりません");
         }
 
+        // パスワードを比較
         const isCorrectPassword = await bcrypt.compare(
           credentials.password,
-          user.hashedPassword,
+          user.hashedPassword, // 'hashedPassword' カラムを仮定
         );
 
         if (!isCorrectPassword) {
           throw new Error("パスワードが正しくありません");
         }
 
-        return user;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        };
       },
     }),
   ],
