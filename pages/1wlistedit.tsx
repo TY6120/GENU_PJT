@@ -1,40 +1,87 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import NavigationBar from "@/components/NavigationBar";
 import Logo from "@/components/Logo";
 import { useRouter } from "next/router";
 
-const mockItems = [
-  { id: 1, name: "魚の切り身", unit: "切れ", quantity: 1 },
-  { id: 2, name: "豆腐", unit: "丁", quantity: 1 },
-  { id: 3, name: "ネギ", unit: "本", quantity: 1 },
-  { id: 4, name: "納豆", unit: "パック", quantity: 1 },
-  { id: 5, name: "卵", unit: "パック", quantity: 1 },
-];
+type Item = { id: string; name: string; unit: string; quantity: number };
 
 export default function ShoppingListEdit() {
-  const [items, setItems] = useState(mockItems);
+  const [items, setItems] = useState<Item[]>([]);
   const router = useRouter();
 
-  const handleDelete = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+  // 一覧取得
+  const fetchList = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
+    const { data, error } = await supabase
+      .from("shopping_list")
+      .select("id, quantity, ingredient:ingredient_id(name, unit)")
+      .eq("user_id", userId);
+    if (error) return console.error(error);
+
+    setItems(
+      data!.map((r) => {
+        let name = "";
+        let unit = "";
+        if (Array.isArray(r.ingredient)) {
+          if (r.ingredient[0]) {
+            name = r.ingredient[0].name ?? "";
+            unit = r.ingredient[0].unit ?? "";
+          }
+        } else if (r.ingredient) {
+          const ingr = r.ingredient as { name: string; unit: string };
+          name = ingr.name ?? "";
+          unit = ingr.unit ?? "";
+        }
+        return {
+          id: r.id,
+          name,
+          unit,
+          quantity: Number(r.quantity),
+        };
+      }),
+    );
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("shopping_list").delete().eq("id", id);
+    fetchList();
+  };
+
+  const handleQtyChange = async (id: string, newQty: number) => {
+    await supabase
+      .from("shopping_list")
+      .update({ quantity: newQty })
+      .eq("id", id);
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, quantity: newQty } : it)),
+    );
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fff" }}>
-      {/* ロゴ */}
+    <div
+      style={{ position: "relative", minHeight: "100vh", background: "#fff" }}
+    >
       <div style={{ position: "absolute", top: 40, left: 40 }}>
         <Logo />
       </div>
-      {/* ナビゲーションバー */}
       <NavigationBar />
-      {/* メイン */}
+
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          marginTop: 120,
+          paddingTop: 120,
+          paddingBottom: 100,
         }}
       >
         <h2
@@ -43,7 +90,7 @@ export default function ShoppingListEdit() {
             fontWeight: "bold",
             marginBottom: 32,
             textAlign: "center",
-            letterSpacing: 2,
+            textShadow: "1px 1px 2px #ccc",
           }}
         >
           買い物リスト編集ページ
@@ -51,17 +98,16 @@ export default function ShoppingListEdit() {
         <div
           style={{
             background: "#fff",
-            padding: 40,
+            boxShadow: "0 2px 16px #eee",
             borderRadius: 12,
-            boxShadow: "0 2px 8px #eee",
-            width: 600,
-            marginBottom: 40,
+            padding: 32,
+            minWidth: 400,
+            maxWidth: 600,
+            width: "100%",
           }}
         >
           {items.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#888", fontSize: 18 }}>
-              リストが空です
-            </div>
+            <p style={{ textAlign: "center" }}>リストが空です</p>
           ) : (
             items.map((item) => (
               <div
@@ -69,31 +115,50 @@ export default function ShoppingListEdit() {
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "space-between",
                   background: "#fafafa",
                   borderRadius: 8,
                   boxShadow: "0 1px 4px #eee",
-                  marginBottom: 16,
                   padding: "12px 20px",
+                  marginBottom: 16,
                 }}
               >
-                <span style={{ flex: 1, fontSize: 18 }}>
-                  {item.name}（{item.unit}）
-                </span>
-                <span style={{ fontSize: 16, color: "#555", marginLeft: 16 }}>
-                  数量：{item.quantity}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 16 }}>
+                    {item.name}（{item.unit}）
+                  </span>
+                  <span style={{ fontSize: 15, color: "#333" }}>
+                    数量：
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      min={0}
+                      onChange={(e) =>
+                        handleQtyChange(item.id, Number(e.target.value))
+                      }
+                      style={{
+                        width: 60,
+                        marginLeft: 4,
+                        marginRight: 4,
+                        padding: 2,
+                        borderRadius: 4,
+                        border: "1px solid #ccc",
+                      }}
+                    />
+                  </span>
+                </div>
                 <button
                   onClick={() => handleDelete(item.id)}
                   style={{
-                    marginLeft: 24,
-                    background: "#a94442",
+                    background: "#B71C1C",
                     color: "#fff",
                     border: "none",
                     borderRadius: 6,
-                    padding: "6px 16px",
+                    padding: "6px 18px",
                     fontWeight: "bold",
                     fontSize: 15,
                     cursor: "pointer",
+                    boxShadow: "0 1px 4px #eee",
                   }}
                 >
                   削除
@@ -102,29 +167,28 @@ export default function ShoppingListEdit() {
             ))
           )}
         </div>
-        <button
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              localStorage.setItem("shoppingList", JSON.stringify(items));
-            }
-            router.push("/1wlist");
-          }}
-          style={{
-            width: 300,
-            background: "#6b9e3d",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: 20,
-            padding: "10px 0",
-            border: "none",
-            borderRadius: 8,
-            marginBottom: 16,
-            cursor: "pointer",
-          }}
-        >
-          保存
-        </button>
       </div>
+      <button
+        onClick={() => router.push("/1wlist")}
+        style={{
+          position: "fixed",
+          bottom: 32,
+          left: "50%",
+          transform: "translateX(-50%)",
+          padding: "14px 60px",
+          borderRadius: 6,
+          background: "#4CAF50",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 18,
+          fontWeight: "bold",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+          letterSpacing: 2,
+        }}
+      >
+        保存
+      </button>
     </div>
   );
 }
