@@ -34,10 +34,7 @@ export default function MyPageEdit() {
 
       // ② currentphysical_infos を maybeSingle() で取得
       //    これによりレコードがない場合でもエラー (406) にならず、data は null になる
-      const {
-        data: physData,
-        error: physError,
-      } = await supabase
+      const { data: physData, error: physError } = await supabase
         .from("currentphysical_infos")
         .select("age, gender, height, weight, bodyfat")
         .eq("user_id", userId)
@@ -85,10 +82,7 @@ export default function MyPageEdit() {
     const userId = authUser.id;
 
     // ③ maybeSingle() で currentphysical_infos に既存行があるかチェック
-    const {
-      data: existData,
-      error: existError,
-    } = await supabase
+    const { data: existData, error: existError } = await supabase
       .from("currentphysical_infos")
       .select("id")
       .eq("user_id", userId)
