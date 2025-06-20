@@ -1,58 +1,113 @@
+// app/1wlist.tsx
 "use client";
+
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import NavigationBar from "@/components/NavigationBar";
 import Logo from "@/components/Logo";
 import { useRouter } from "next/router";
 
-const mockItems = [
-  { id: 1, name: "魚の切り身", unit: "切れ", quantity: 1 },
-  { id: 2, name: "豆腐", unit: "丁", quantity: 1 },
-  { id: 3, name: "ネギ", unit: "本", quantity: 1 },
-  { id: 4, name: "納豆", unit: "パック", quantity: 1 },
-  { id: 5, name: "卵", unit: "パック", quantity: 1 },
-];
+type ShoppingListRow = {
+  id: string;
+  quantity: number;
+  checked: boolean;
+  ingredient: { name: string; unit: string }[];
+};
+
+type Item = {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  checked: boolean;
+};
 
 export default function ShoppingList() {
-  const [checked, setChecked] = useState<number[]>([]);
-  const [items, setItems] = useState(mockItems);
+  const [items, setItems] = useState<Item[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("shoppingList");
-      if (saved) {
-        try {
-          setItems(JSON.parse(saved));
-        } catch {
-          setItems(mockItems);
-        }
-      } else {
-        setItems(mockItems);
-      }
-    }
+    fetchList();
   }, []);
 
-  const handleCheck = (id: number) => {
-    setChecked((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+  /** Supabase から買い物リストを取得して state にセット */
+  const fetchList = async () => {
+    // 1) ログインユーザー取得
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+    if (userErr) {
+      console.error("getUser error:", userErr);
+      return;
+    }
+    const userId = user?.id;
+    if (!userId) return;
+
+    // 2) shopping_list と ingredients を JOIN
+    const { data, error } = await supabase
+      .from("shopping_list")
+      // ingredient_id → ingredients テーブルを参照、alias を ingredient にしています
+      .select("id, quantity, checked, ingredient:ingredient_id(name, unit)")
+      .eq("user_id", userId);
+
+    console.log("shopping_list data:", data);
+
+    if (error) {
+      console.error("shopping_list fetch error:", error);
+      return;
+    }
+
+    // 3) 配列の先頭要素から name/unit を取り出す
+    const mapped = (data ?? []).map((row: ShoppingListRow) => {
+      const rec = Array.isArray(row.ingredient)
+        ? (row.ingredient[0] ?? { name: "", unit: "" })
+        : (row.ingredient ?? { name: "", unit: "" });
+      return {
+        id: row.id,
+        name: rec.name ?? "",
+        unit: rec.unit ?? "",
+        quantity: Number(row.quantity),
+        checked: row.checked,
+      };
+    });
+
+    (data ?? []).forEach((row, i) => {
+      console.log(`row[${i}]`, row);
+      console.log(`ingredient[${i}]`, row.ingredient);
+    });
+
+    setItems(mapped);
+  };
+
+  const handleCheck = async (id: string, checked: boolean) => {
+    // Supabaseにchecked状態を保存
+    await supabase
+      .from("shopping_list")
+      .update({ checked: !checked })
+      .eq("id", id);
+
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, checked: !checked } : it)),
     );
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fff" }}>
-      {/* ロゴ */}
+    <div
+      style={{ position: "relative", minHeight: "100vh", background: "#fff" }}
+    >
       <div style={{ position: "absolute", top: 40, left: 40 }}>
         <Logo />
       </div>
-      {/* ナビゲーションバー */}
       <NavigationBar />
-      {/* メイン */}
+
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          marginTop: 120,
+          paddingTop: 120,
+          paddingBottom: 100,
         }}
       >
         <h2
@@ -61,67 +116,81 @@ export default function ShoppingList() {
             fontWeight: "bold",
             marginBottom: 32,
             textAlign: "center",
-            letterSpacing: 2,
+            textShadow: "1px 1px 2px #ccc",
           }}
         >
           買い物リスト
         </h2>
+
         <div
           style={{
             background: "#fff",
-            padding: 40,
+            boxShadow: "0 2px 16px #eee",
             borderRadius: 12,
-            boxShadow: "0 2px 8px #eee",
-            width: 600,
-            marginBottom: 40,
+            padding: 32,
+            minWidth: 400,
+            maxWidth: 600,
+            width: "100%",
           }}
         >
-          {items.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                background: "#fafafa",
-                borderRadius: 8,
-                boxShadow: "0 1px 4px #eee",
-                marginBottom: 16,
-                padding: "12px 20px",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={checked.includes(item.id)}
-                onChange={() => handleCheck(item.id)}
-                style={{ marginRight: 16, width: 20, height: 20 }}
-              />
-              <span style={{ flex: 1, fontSize: 18 }}>
-                {item.name}（{item.unit}）
-              </span>
-              <span style={{ fontSize: 16, color: "#555", marginLeft: 16 }}>
-                数量：{item.quantity}
-              </span>
-            </div>
-          ))}
+          {items.length === 0 ? (
+            <p style={{ textAlign: "center" }}>リストが空です</p>
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#fafafa",
+                  borderRadius: 8,
+                  boxShadow: "0 1px 4px #eee",
+                  padding: "12px 20px",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={item.checked}
+                    onChange={() => handleCheck(item.id, item.checked)}
+                    style={{ width: 20, height: 20 }}
+                  />
+                  <span style={{ fontSize: 16 }}>
+                    {item.name}（{item.unit}）
+                  </span>
+                </div>
+                <span style={{ fontSize: 15, color: "#333" }}>
+                  数量：{item.quantity}
+                </span>
+              </div>
+            ))
+          )}
         </div>
-        <button
-          onClick={() => router.push("/1wlistedit")}
-          style={{
-            width: 300,
-            background: "#6b9e3d",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: 20,
-            padding: "10px 0",
-            border: "none",
-            borderRadius: 8,
-            marginBottom: 16,
-            cursor: "pointer",
-          }}
-        >
-          編集
-        </button>
       </div>
+
+      <button
+        onClick={() => router.push("/1wlistedit")}
+        style={{
+          position: "fixed",
+          bottom: 32,
+          left: "50%",
+          transform: "translateX(-50%)",
+          padding: "14px 60px",
+          borderRadius: 6,
+          background: "#4CAF50",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 18,
+          fontWeight: "bold",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+          letterSpacing: 2,
+        }}
+      >
+        編集
+      </button>
     </div>
   );
 }
