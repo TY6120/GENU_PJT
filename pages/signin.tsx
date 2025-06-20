@@ -13,10 +13,10 @@ export default function SignIn() {
     e.preventDefault();
     setErrorMessage("");
     console.log(email, password);
-    try{
+    try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email:email,
-        password:password,
+        email: email,
+        password: password,
       });
       if (error) {
         // 認証エラーが発生した場合はメッセージをセット
@@ -28,7 +28,7 @@ export default function SignIn() {
         // サインインに成功したら、例えばダッシュボードへリダイレクト
         router.push("/mypage");
       }
-    }catch(error){
+    } catch (error) {
       console.error(error);
       setErrorMessage("メールアドレスまたはパスワードが正しくありません");
     }
@@ -115,7 +115,9 @@ export default function SignIn() {
             }}
           />
         </div>
-        {errorMessage && <div style={{ color: "red", marginBottom: 16 }}>{errorMessage}</div>}
+        {errorMessage && (
+          <div style={{ color: "red", marginBottom: 16 }}>{errorMessage}</div>
+        )}
         <button
           type="submit"
           style={{
