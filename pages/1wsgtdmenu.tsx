@@ -1,91 +1,226 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { Session } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
 import NavigationBar from "@/components/NavigationBar";
 import Logo from "@/components/Logo";
+import { supabase } from "@/lib/supabase";
 
-const weekMenus = [
-  {
-    day: "月曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-    note: "卵野菜スープ、ごはん少なめ、おにぎり",
-  },
-  {
-    day: "火曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-  },
-  {
-    day: "水曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-  },
-  {
-    day: "木曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-  },
-  {
-    day: "金曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-  },
-  {
-    day: "土曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-  },
-  {
-    day: "日曜日",
-    breakfast: "焼魚、焼き野菜、味噌汁、卵",
-    lunch: "サラダチキン、ブロッコリー、おにぎり",
-    dinner: "鶏胸肉スープ、シーザーサラダ",
-    kcal: 999,
-  },
+const WEEKDAYS_JP = [
+  "月曜日",
+  "火曜日",
+  "水曜日",
+  "木曜日",
+  "金曜日",
+  "土曜日",
+  "日曜日",
 ];
+
+type DayMenu = {
+  day: string;
+  breakfast: string;
+  lunch: string;
+  dinner: string;
+  kcal: number;
+};
+
+type MealPlanItem = {
+  day_of_week: number;
+  meal_type: "breakfast" | "lunch" | "dinner";
+  recipe:
+    | {
+        name: string;
+        calories: number;
+      }[]
+    | null;
+};
+
+/**
+ * 指定プランの週メニューからショッピングリストを再生成して upsert する
+ */
+async function updateShoppingList(planId: string, userId: string) {
+  // 1) その週の recipe_id を取得
+  const { data: items, error: itemsErr } = await supabase
+    .from("meal_plan_items")
+    .select("recipe_id")
+    .eq("plan_id", planId);
+  if (itemsErr || !items) throw itemsErr;
+
+  const recipeIds = items.map((i) => i.recipe_id);
+
+  // 2) recipe_ingredients を取得
+  const { data: aggs, error: aggErr } = await supabase
+    .from("recipe_ingredients")
+    .select("ingredient_id, quantity")
+    .in("recipe_id", recipeIds);
+  if (aggErr || !aggs) throw aggErr;
+
+  // 3) ingredient_idごとに合計
+  const map = new Map<string, number>();
+  aggs.forEach(({ ingredient_id, quantity }) => {
+    map.set(ingredient_id, (map.get(ingredient_id) ?? 0) + Number(quantity));
+  });
+
+  // 4) upsert用ペイロード生成
+  const upsertPayload = Array.from(map.entries()).map(
+    ([ingredient_id, quantity]) => ({
+      user_id: userId,
+      ingredient_id,
+      quantity,
+      checked: false,
+    }),
+  );
+
+  // 5) shopping_listテーブルにupsert
+  const { error: upsertErr } = await supabase
+    .from("shopping_list")
+    .upsert(upsertPayload, { onConflict: "user_id,ingredient_id" });
+  if (upsertErr) throw upsertErr;
+}
 
 export default function OneWeekMenu() {
   const router = useRouter();
+  const [menus, setMenus] = useState<DayMenu[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [session, setSession] = useState<Session | null>(null);
+
+  // 週メニュー取得
+  const fetchMenus = async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    // 1) 最新プランID取得
+    const { data: plan, error: planErr } = await supabase
+      .from("meal_plans")
+      .select("id")
+      .order("week_start_date", { ascending: false })
+      .limit(1)
+      .single();
+    if (planErr || !plan) {
+      setErrorMessage("プランの取得に失敗しました。");
+      setLoading(false);
+      return;
+    }
+    setPlanId(plan.id);
+
+    // 2) メニューアイテム取得（修正ポイント）
+    const { data: items, error: itemsErr } = await supabase
+      .from("meal_plan_items")
+      .select(
+        `
+        day_of_week,
+        meal_type,
+        recipe:recipes ( name, calories )
+      `,
+      )
+      .eq("plan_id", plan.id)
+      .order("day_of_week", { ascending: true })
+      .order("meal_type", { ascending: true });
+    if (itemsErr || !items) {
+      setErrorMessage("メニューアイテムの取得に失敗しました。");
+      setLoading(false);
+      return;
+    }
+
+    console.log(items);
+
+    // 3) 雛形作成
+    const tmp: Record<number, DayMenu> = {};
+    for (let dow = 0; dow < 7; dow++) {
+      tmp[dow] = {
+        day: WEEKDAYS_JP[dow],
+        breakfast: "",
+        lunch: "",
+        dinner: "",
+        kcal: 0,
+      };
+    }
+
+    // 4) データマージ
+    items.forEach((it: MealPlanItem) => {
+      const dm = tmp[it.day_of_week];
+      const rec = Array.isArray(it.recipe)
+        ? (it.recipe[0] ?? { name: "", calories: 0 })
+        : (it.recipe ?? { name: "", calories: 0 });
+      if (it.meal_type === "breakfast") dm.breakfast = rec.name;
+      if (it.meal_type === "lunch") dm.lunch = rec.name;
+      if (it.meal_type === "dinner") dm.dinner = rec.name;
+      dm.kcal += rec.calories;
+    });
+
+    setMenus([tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6]]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    // セッション取得後にフェッチ
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    fetchMenus();
+  }, []);
+
+  // メニューリセット＋リスト更新
+  const handleReset = async () => {
+    if (!planId || !session?.user.id) return;
+    if (!confirm("本当にメニューをリセットしますか？")) return;
+
+    try {
+      // 買い物リストのchecked状態を全てFALSEにリセット
+      const { error: resetErr } = await supabase
+        .from("shopping_list")
+        .update({ checked: false })
+        .eq("user_id", session.user.id);
+      if (resetErr) throw resetErr;
+
+      // RPC でメニュー再生成
+      const { error: rpcErr } = await supabase.rpc("reset_and_randomize_week", {
+        p_plan_id: planId,
+      });
+      if (rpcErr) throw rpcErr;
+
+      // 再取得
+      await fetchMenus();
+      // ショッピングリスト更新
+      await updateShoppingList(planId, session.user.id);
+    } catch (e: unknown) {
+      console.error(e);
+      const message = e instanceof Error ? e.message : String(e);
+      alert(message);
+    }
+  };
+
+  if (loading)
+    return <p style={{ textAlign: "center", marginTop: 100 }}>読み込み中…</p>;
+  if (errorMessage)
+    return (
+      <p style={{ color: "red", textAlign: "center", marginTop: 100 }}>
+        {errorMessage}
+      </p>
+    );
+
   return (
-    <div style={{ minHeight: "100vh", background: "#fff" }}>
-      {/* ロゴ */}
+    <div
+      style={{ position: "relative", minHeight: "100vh", background: "#fff" }}
+    >
       <div style={{ position: "absolute", top: 40, left: 40 }}>
         <Logo />
       </div>
-      {/* ナビゲーションバー */}
       <NavigationBar />
-      {/* メイン */}
+
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          marginTop: 120,
+          paddingTop: 120,
+          paddingBottom: 100,
         }}
       >
-        <h2
-          style={{
-            fontSize: 28,
-            fontWeight: "bold",
-            marginBottom: 32,
-            textAlign: "center",
-          }}
-        >
+        <h2 style={{ fontSize: 28, fontWeight: "bold", marginBottom: 32 }}>
           一週間分の食事
         </h2>
+
         <div
           style={{
             display: "flex",
@@ -95,7 +230,7 @@ export default function OneWeekMenu() {
             width: "100%",
           }}
         >
-          {weekMenus.map((menu) => (
+          {menus.map((menu) => (
             <div
               key={menu.day}
               style={{
@@ -106,7 +241,6 @@ export default function OneWeekMenu() {
                 boxShadow: "0 2px 8px #ddd",
                 borderRadius: 8,
                 padding: 24,
-                marginBottom: 24,
                 cursor: "pointer",
                 transition: "box-shadow 0.2s",
               }}
@@ -119,23 +253,43 @@ export default function OneWeekMenu() {
               >
                 {menu.day}
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <b>朝食</b>　{menu.breakfast}
+              <div>
+                <b>朝食</b> {menu.breakfast}
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <b>昼食</b>　{menu.lunch}
+              <div>
+                <b>昼食</b> {menu.lunch}
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <b>夕食</b>　{menu.dinner}
+              <div>
+                <b>夕食</b> {menu.dinner}
               </div>
-              {menu.note && <div style={{ marginBottom: 8 }}>{menu.note}</div>}
               <div style={{ marginTop: 8 }}>
-                <b>総摂取カロリー</b>　{menu.kcal}kcal
+                <b>総摂取カロリー</b> {menu.kcal}kcal
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <button
+        onClick={handleReset}
+        style={{
+          position: "fixed",
+          bottom: 24,
+          left: "50%",
+          transform: "translateX(-50%)",
+          padding: "12px 24px",
+          borderRadius: 4,
+          background: "#4CAF50",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 16,
+          fontWeight: "bold",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+        }}
+      >
+        メニューリセット
+      </button>
     </div>
   );
 }
