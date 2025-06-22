@@ -43,6 +43,30 @@ export default function Signup() {
         setError("usersテーブルへの登録に失敗しました: " + insertError.message);
         return;
       }
+
+      // 新規ユーザー用の初期プランを作成
+      const currentDate = new Date();
+      const day = currentDate.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+      const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+      const weekStartDate = new Date(currentDate.setDate(diff));
+      weekStartDate.setHours(0, 0, 0, 0);
+
+      const { error: planError } = await supabase
+        .from("meal_plans")
+        .insert([
+          {
+            user_id: authUser.id,
+            week_start_date: weekStartDate.toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      if (planError) {
+        setError("初期プランの作成に失敗しました: " + planError.message);
+        return;
+      }
     }
     setSuccess("新規登録が完了しました！");
     setTimeout(() => router.push("/signin"), 1500);

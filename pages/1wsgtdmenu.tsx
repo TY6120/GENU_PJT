@@ -87,25 +87,70 @@ export default function OneWeekMenu() {
   const [session, setSession] = useState<Session | null>(null);
 
   // 週メニュー取得
-  const fetchMenus = async () => {
+  const fetchMenus = async (userId: string) => {
     setLoading(true);
     setErrorMessage("");
 
-    // 1) 最新プランID取得
+    // 1) 最新プランID取得 (user_idで絞り込み)
     const { data: plan, error: planErr } = await supabase
       .from("meal_plans")
       .select("id")
+      .eq("user_id", userId)
       .order("week_start_date", { ascending: false })
       .limit(1)
       .single();
+
     if (planErr || !plan) {
-      setErrorMessage("プランの取得に失敗しました。");
-      setLoading(false);
-      return;
+      // プランが存在しない場合、新規ユーザー用の初期プランを作成
+      try {
+        const currentDate = new Date();
+        const day = currentDate.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+        const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+        const weekStartDate = new Date(currentDate.setDate(diff));
+        weekStartDate.setHours(0, 0, 0, 0);
+
+        const { data: newPlans, error: createPlanErr } = await supabase
+          .from("meal_plans")
+          .insert([
+            {
+              user_id: userId,
+              week_start_date: weekStartDate.toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ])
+          .select();
+
+        if (createPlanErr || !newPlans || newPlans.length === 0) {
+          setErrorMessage("初期プランの作成に失敗しました。");
+          setLoading(false);
+          return;
+        }
+
+        const newPlan = newPlans[0];
+        setPlanId(newPlan.id);
+        // 空のメニューを表示
+        const emptyMenus = WEEKDAYS_JP.map((day) => ({
+          day,
+          breakfast: "",
+          lunch: "",
+          dinner: "",
+          kcal: 0,
+        }));
+        setMenus(emptyMenus);
+        setLoading(false);
+        return;
+      } catch (error) {
+        console.error("初期プラン作成エラー:", error);
+        setErrorMessage("初期プランの作成に失敗しました。");
+        setLoading(false);
+        return;
+      }
     }
+
     setPlanId(plan.id);
 
-    // 2) メニューアイテム取得（修正ポイント）
+    // 2) メニューアイテム取得
     const { data: items, error: itemsErr } = await supabase
       .from("meal_plan_items")
       .select(
@@ -156,8 +201,20 @@ export default function OneWeekMenu() {
 
   useEffect(() => {
     // セッション取得後にフェッチ
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    fetchMenus();
+    const getSessionAndFetch = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setSession(session);
+      if (session) {
+        await fetchMenus(session.user.id);
+      } else {
+        // セッションがない場合はロード中を解除し、必要であればログインページへ誘導
+        setLoading(false);
+        // router.push('/signin'); // 必要に応じて
+      }
+    };
+    getSessionAndFetch();
   }, []);
 
   // メニューリセット＋リスト更新
@@ -180,7 +237,7 @@ export default function OneWeekMenu() {
       if (rpcErr) throw rpcErr;
 
       // 再取得
-      await fetchMenus();
+      await fetchMenus(session.user.id);
       // ショッピングリスト更新
       await updateShoppingList(planId, session.user.id);
     } catch (e: unknown) {
@@ -220,6 +277,26 @@ export default function OneWeekMenu() {
         <h2 style={{ fontSize: 28, fontWeight: "bold", marginBottom: 32 }}>
           一週間分の食事
         </h2>
+
+        {menus.every(
+          (menu) => !menu.breakfast && !menu.lunch && !menu.dinner,
+        ) && (
+          <div
+            style={{
+              background: "#f0f8ff",
+              border: "1px solid #4CAF50",
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 24,
+              textAlign: "center",
+              maxWidth: 600,
+            }}
+          >
+            <p style={{ margin: 0, color: "#2e7d32", fontSize: 16 }}>
+              メニューがまだ生成されていません。「メニュー生成」ボタンを押して、一週間分のメニューを作成してください。
+            </p>
+          </div>
+        )}
 
         <div
           style={{
@@ -288,7 +365,7 @@ export default function OneWeekMenu() {
           boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
         }}
       >
-        メニューリセット
+        メニュー生成
       </button>
     </div>
   );

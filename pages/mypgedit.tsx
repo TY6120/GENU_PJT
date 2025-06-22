@@ -64,24 +64,23 @@ export default function MyPageEdit() {
     setError("");
     setSuccess("");
 
-    // ① 入力チェック
     if (!age || !gender || !height || !weight || !bodyFat) {
       setError("全ての項目を入力してください");
       return;
     }
 
-    // ② supabase.auth.getUser() で再度 userId を取得
     const {
       data: { user: authUser },
       error: getUserError,
     } = await supabase.auth.getUser();
+
     if (getUserError || !authUser) {
       setError("ログイン情報の取得に失敗しました");
       return;
     }
     const userId = authUser.id;
 
-    // ③ maybeSingle() で currentphysical_infos に既存行があるかチェック
+    // 既存データの有無を確認
     const { data: existData, error: existError } = await supabase
       .from("currentphysical_infos")
       .select("id")
@@ -95,8 +94,7 @@ export default function MyPageEdit() {
 
     let result;
     if (existData) {
-      // ── UPDATE ──
-      // 既存行があるので、updated_at を現在時刻にしてレコードを更新する
+      // 更新 (UPDATE)
       result = await supabase
         .from("currentphysical_infos")
         .update({
@@ -105,12 +103,11 @@ export default function MyPageEdit() {
           height: Number(height),
           weight: Number(weight),
           bodyfat: Number(bodyFat),
-          updated_at: new Date().toISOString(), // テーブルに追加済み
+          updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId);
     } else {
-      // ── INSERT ──
-      // 既存行がないときは新規登録：created_at と updated_at をセットする
+      // 新規作成 (INSERT)
       result = await supabase.from("currentphysical_infos").insert([
         {
           user_id: userId,
@@ -119,8 +116,8 @@ export default function MyPageEdit() {
           height: Number(height),
           weight: Number(weight),
           bodyfat: Number(bodyFat),
-          created_at: new Date().toISOString(), // テーブルに追加済み
-          updated_at: new Date().toISOString(), // テーブルに追加済み
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
       ]);
     }
