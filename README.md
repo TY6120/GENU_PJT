@@ -65,6 +65,9 @@
       - アイテムの削除
     - 編集内容は`shopping_list`テーブルに即時反映される。
 
+## 仕様設計
+- https://docs.google.com/spreadsheets/d/1msx5gVZ0pvZp7j415ktE5ewMw2zvCkBNXt4rgQzte-Y/edit?gid=577430712#gid=577430712
+
 ## 技術スタック
 
 - **フレームワーク**: [Next.js](https://nextjs.org/)
@@ -80,43 +83,50 @@ https://www.figma.com/design/EaAs7sB4RjdhUJPBavAgas/Untitled?node-id=0-1&t=P3Z5a
 
 ## supabaseER図
 
-![ER図](public/erd.png)
+![alt text](<supabase-schema-kdtwtajwlcuodjevrwxq (4).png>)
+
+## デモURL
+https://genu-pjt-ynod.vercel.app/signin
+
+## デモ用アカウント
+- ID：test2@gmail.com
+- PASS：123456
 
 ---
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+このプロジェクトは、[`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app) を使って作成された [Next.js](https://nextjs.org) プロジェクトです。
 
-## Getting Started
+## はじめに
 
-First, run the development server:
+まず、開発サーバーを起動します:
 
 ```bash
 npm run dev
-# or
+# または
 yarn dev
-# or
+# または
 pnpm dev
-# or
+# または
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで [http://localhost:3000](http://localhost:3000) を開くと、アプリケーションの画面が表示されます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`app/page.tsx` を編集することでページの内容を変更できます。ファイルを保存すると、ページは自動的にリロードされます。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+このプロジェクトでは [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) を使用して、[Geist](https://vercel.com/font) フォントを自動的に最適化・読み込みしています。
 
-## Learn More
+## さらに学ぶ
 
-To learn more about Next.js, take a look at the following resources:
+Next.jsについて詳しく知りたい場合は、以下のリソースをご覧ください。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js ドキュメント](https://nextjs.org/docs) - Next.jsの機能やAPIについて学べます。
+- [Learn Next.js](https://nextjs.org/learn) - インタラクティブなNext.jsチュートリアル。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+[Next.jsのGitHubリポジトリ](https://github.com/vercel/next.js) もご覧いただけます。フィードバックやコントリビューションも歓迎です！
 
-## Deploy on Vercel
+## Vercelでのデプロイ
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Next.jsアプリをデプロイする最も簡単な方法は、Next.jsの開発元である[Vercelプラットフォーム](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme)を利用することです。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+デプロイの詳細については、[Next.jsのデプロイメントドキュメント](https://nextjs.org/docs/app/building-your-application/deploying)をご覧ください。
