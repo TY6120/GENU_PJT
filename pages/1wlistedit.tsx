@@ -9,6 +9,7 @@ type Item = { id: string; name: string; unit: string; quantity: number };
 
 export default function ShoppingListEdit() {
   const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // 一覧取得
@@ -48,8 +49,28 @@ export default function ShoppingListEdit() {
   };
 
   useEffect(() => {
-    fetchList();
-  }, []);
+    const checkAuthAndFetch = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/signin');
+        return;
+      }
+      await fetchList();
+      setLoading(false);
+    };
+    checkAuthAndFetch();
+
+    // セッション変更の監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          router.push('/signin');
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   const handleDelete = async (id: string) => {
     await supabase.from("shopping_list").delete().eq("id", id);
@@ -106,7 +127,9 @@ export default function ShoppingListEdit() {
             width: "100%",
           }}
         >
-          {items.length === 0 ? (
+          {loading ? (
+            <p style={{ textAlign: "center" }}>認証中...</p>
+          ) : items.length === 0 ? (
             <p style={{ textAlign: "center" }}>リストが空です</p>
           ) : (
             items.map((item) => (

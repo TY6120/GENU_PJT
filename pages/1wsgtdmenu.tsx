@@ -209,13 +209,28 @@ export default function OneWeekMenu() {
       if (session) {
         await fetchMenus(session.user.id);
       } else {
-        // セッションがない場合はロード中を解除し、必要であればログインページへ誘導
+        // セッションがない場合はログインページへリダイレクト
         setLoading(false);
-        // router.push('/signin'); // 必要に応じて
+        router.push('/signin');
+        return;
       }
     };
     getSessionAndFetch();
-  }, []);
+
+    // セッション変更の監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          router.push('/signin');
+        } else if (session) {
+          setSession(session);
+          await fetchMenus(session.user.id);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   // メニューリセット＋リスト更新
   const handleReset = async () => {
@@ -298,7 +313,16 @@ export default function OneWeekMenu() {
           </div>
         )}
 
+        <style>{`
+          @media (max-width: 700px) {
+            .menu-card-list {
+              flex-direction: column !important;
+              align-items: center !important;
+            }
+          }
+        `}</style>
         <div
+          className="menu-card-list"
           style={{
             display: "flex",
             flexWrap: "wrap",

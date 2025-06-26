@@ -21,6 +21,7 @@ export default function OneDayMenu() {
     { type: "夕食", name: "", ingredients: "", steps: [], calories: 0 },
   ]);
   const [day, setDay] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   const dayIndex = useMemo<Record<string, number>>(
     () => ({
@@ -37,6 +38,13 @@ export default function OneDayMenu() {
 
   useEffect(() => {
     async function fetchData() {
+      // 認証チェック
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/signin');
+        return;
+      }
+
       if (!router.isReady) return;
       const { day } = router.query;
       if (typeof day !== "string") return;
@@ -141,10 +149,22 @@ export default function OneDayMenu() {
       });
 
       setMeals(newMeals);
+      setLoading(false);
     }
 
     fetchData();
-  }, [router.isReady, router.query, dayIndex]);
+
+    // セッション変更の監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          router.push('/signin');
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [router.isReady, router.query, dayIndex, router]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#fff" }}>
@@ -155,115 +175,126 @@ export default function OneDayMenu() {
       {/* ナビゲーションバー */}
       <NavigationBar />
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          marginTop: 120,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 32,
-            fontWeight: "bold",
-            marginBottom: 32,
-            textAlign: "center",
-            letterSpacing: 2,
-          }}
-        >
-          {day || "○曜日"}
-        </h2>
-
+      {loading ? (
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center", 
+          minHeight: "100vh" 
+        }}>
+          <p>認証中...</p>
+        </div>
+      ) : (
         <div
           style={{
-            background: "#fff",
-            padding: 40,
-            borderRadius: 12,
-            boxShadow: "0 2px 8px #eee",
-            width: 900,
-            marginBottom: 40,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginTop: 120,
           }}
         >
-          {meals.map((meal) => (
-            <div key={meal.type} style={{ marginBottom: 48 }}>
-              {/* タイトル行 */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontWeight: "bold", fontSize: 18, minWidth: 60 }}>
-                  {meal.type}
+          <h2
+            style={{
+              fontSize: 32,
+              fontWeight: "bold",
+              marginBottom: 32,
+              textAlign: "center",
+              letterSpacing: 2,
+            }}
+          >
+            {day || "○曜日"}
+          </h2>
+
+          <div
+            style={{
+              background: "#fff",
+              padding: 40,
+              borderRadius: 12,
+              boxShadow: "0 2px 8px #eee",
+              width: 900,
+              marginBottom: 40,
+            }}
+          >
+            {meals.map((meal) => (
+              <div key={meal.type} style={{ marginBottom: 48 }}>
+                {/* タイトル行 */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", fontSize: 18, minWidth: 60 }}>
+                    {meal.type}
+                  </div>
+                  <div style={{ fontSize: 18, marginLeft: 24 }}>{meal.name}</div>
                 </div>
-                <div style={{ fontSize: 18, marginLeft: 24 }}>{meal.name}</div>
-              </div>
 
-              {/* 材料 */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  marginBottom: 16,
-                  fontSize: 16,
-                }}
-              >
-                <div style={{ fontWeight: "bold", minWidth: 60 }}>材料</div>
-                <div style={{ marginLeft: 24 }}>{meal.ingredients}</div>
-              </div>
+                {/* 材料 */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    marginBottom: 16,
+                    fontSize: 16,
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", minWidth: 60 }}>材料</div>
+                  <div style={{ marginLeft: 24 }}>{meal.ingredients}</div>
+                </div>
 
-              {/* 作り方 */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  marginBottom: 16,
-                  fontSize: 16,
-                }}
-              >
-                <div style={{ fontWeight: "bold", minWidth: 60 }}>作り方</div>
-                <div style={{ marginLeft: 24 }}>
-                  {meal.steps.map((step, index) => (
-                    <div key={index}>{step}</div>
-                  ))}
+                {/* 作り方 */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    marginBottom: 16,
+                    fontSize: 16,
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", minWidth: 60 }}>作り方</div>
+                  <div style={{ marginLeft: 24 }}>
+                    {meal.steps.map((step, index) => (
+                      <div key={index}>{step}</div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* カロリー */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 8,
+                    fontSize: 16,
+                  }}
+                >
+                  <div style={{ fontWeight: "bold", minWidth: 60 }}>カロリー</div>
+                  <div style={{ marginLeft: 24 }}>{meal.calories}kcal</div>
                 </div>
               </div>
+            ))}
+          </div>
 
-              {/* カロリー */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 8,
-                  fontSize: 16,
-                }}
-              >
-                <div style={{ fontWeight: "bold", minWidth: 60 }}>カロリー</div>
-                <div style={{ marginLeft: 24 }}>{meal.calories}kcal</div>
-              </div>
-            </div>
-          ))}
+          <button
+            onClick={() => router.push("/1wsgtdmenu")}
+            style={{
+              width: 400,
+              background: "#6b9e3d",
+              color: "#fff",
+              fontWeight: "bold",
+              fontSize: 20,
+              padding: "10px 0",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            1週間分のメニューへ戻る
+          </button>
         </div>
-
-        <button
-          onClick={() => router.push("/1wsgtdmenu")}
-          style={{
-            width: 400,
-            background: "#6b9e3d",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: 20,
-            padding: "10px 0",
-            border: "none",
-            borderRadius: 8,
-            cursor: "pointer",
-          }}
-        >
-          1週間分のメニューへ戻る
-        </button>
-      </div>
+      )}
     </div>
   );
 }
