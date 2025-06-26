@@ -64,15 +64,16 @@ export default function NavigationBar() {
       <style>{`
         @media (max-width: 600px) {
           .nav-bar-genu-wrapper {
-            flex-direction: column !important;
-            align-items: center !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            gap: 6px !important;
+            /* flex-direction: column !important; */
+            /* align-items: center !important; */
+            /* padding-left: 0 !important; */
+            /* padding-right: 0 !important; */
+            /* gap: 6px !important; */
+            /* margin-top: 80px !important; */
           }
           .nav-bar-genu-group {
-            justify-content: center !important;
-            width: 100% !important;
+            /* justify-content: center !important; */
+            /* width: 100% !important; */
           }
         }
       `}</style>

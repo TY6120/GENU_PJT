@@ -142,7 +142,17 @@ export default function MyPage() {
         </h2>
 
         {/* 情報カード２カラム */}
+        <style>{`
+          @media (max-width: 600px) {
+            .mypage-card-row {
+              flex-direction: column !important;
+              align-items: center !important;
+              gap: 32px !important;
+            }
+          }
+        `}</style>
         <div
+          className="mypage-card-row"
           style={{
             width: "100%",
             maxWidth: 900,
