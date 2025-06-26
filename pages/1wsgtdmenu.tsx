@@ -211,23 +211,23 @@ export default function OneWeekMenu() {
       } else {
         // セッションがない場合はログインページへリダイレクト
         setLoading(false);
-        router.push('/signin');
+        router.push("/signin");
         return;
       }
     };
     getSessionAndFetch();
 
     // セッション変更の監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          router.push('/signin');
-        } else if (session) {
-          setSession(session);
-          await fetchMenus(session.user.id);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        router.push("/signin");
+      } else if (session) {
+        setSession(session);
+        await fetchMenus(session.user.id);
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, [router]);

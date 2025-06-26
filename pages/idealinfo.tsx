@@ -15,9 +15,11 @@ export default function IdealInfo() {
 
   useEffect(() => {
     const checkAuthAndFetch = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/signin');
+        router.push("/signin");
         return;
       }
       await fetchIdeal();
@@ -26,13 +28,13 @@ export default function IdealInfo() {
     checkAuthAndFetch();
 
     // セッション変更の監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          router.push('/signin');
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_OUT") {
+        router.push("/signin");
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, [router]);
@@ -155,7 +157,10 @@ export default function IdealInfo() {
           ) : (
             <>
               <div style={{ marginBottom: 20 }}>
-                <label htmlFor="weight" style={{ display: "block", marginBottom: 8 }}>
+                <label
+                  htmlFor="weight"
+                  style={{ display: "block", marginBottom: 8 }}
+                >
                   体重(kg)
                 </label>
                 <input
@@ -193,9 +198,13 @@ export default function IdealInfo() {
                   }}
                 />
               </div>
-              {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+              {error && (
+                <div style={{ color: "red", marginBottom: 16 }}>{error}</div>
+              )}
               {success && (
-                <div style={{ color: "green", marginBottom: 16 }}>{success}</div>
+                <div style={{ color: "green", marginBottom: 16 }}>
+                  {success}
+                </div>
               )}
               <button
                 type="submit"

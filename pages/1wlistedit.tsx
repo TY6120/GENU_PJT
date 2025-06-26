@@ -50,26 +50,17 @@ export default function ShoppingListEdit() {
 
   useEffect(() => {
     const checkAuthAndFetch = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/signin');
+        router.push("/signin");
         return;
       }
       await fetchList();
       setLoading(false);
     };
     checkAuthAndFetch();
-
-    // セッション変更の監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          router.push('/signin');
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, [router]);
 
   const handleDelete = async (id: string) => {

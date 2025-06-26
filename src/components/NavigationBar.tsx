@@ -12,15 +12,15 @@ export default function NavigationBar() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('ログアウトエラー:', error);
-        alert('ログアウトに失敗しました');
+        console.error("ログアウトエラー:", error);
+        alert("ログアウトに失敗しました");
         return;
       }
       // ログアウト成功後、サインインページへ遷移
-      router.push('/signin');
+      router.push("/signin");
     } catch (error) {
-      console.error('ログアウトエラー:', error);
-      alert('ログアウトに失敗しました');
+      console.error("ログアウトエラー:", error);
+      alert("ログアウトに失敗しました");
     }
   };
 
@@ -78,12 +78,29 @@ export default function NavigationBar() {
       `}</style>
       <div className="nav-bar-genu-wrapper" style={navWrapperStyle}>
         <div className="nav-bar-genu-group" style={groupStyle}>
-          <button style={buttonStyle} onClick={() => handleNavigation("/mypage")}>マイページ</button>
-          <button style={buttonStyle} onClick={() => handleNavigation("/1wsgtdmenu")}>食事メニュー</button>
+          <button
+            style={buttonStyle}
+            onClick={() => handleNavigation("/mypage")}
+          >
+            マイページ
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => handleNavigation("/1wsgtdmenu")}
+          >
+            食事メニュー
+          </button>
         </div>
         <div className="nav-bar-genu-group" style={groupStyle}>
-          <button style={buttonStyle} onClick={() => handleNavigation("/1wlist")}>買い物リスト</button>
-          <button style={buttonStyle} onClick={handleLogout}>ログアウト</button>
+          <button
+            style={buttonStyle}
+            onClick={() => handleNavigation("/1wlist")}
+          >
+            買い物リスト
+          </button>
+          <button style={buttonStyle} onClick={handleLogout}>
+            ログアウト
+          </button>
         </div>
       </div>
     </>

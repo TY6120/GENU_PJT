@@ -55,17 +55,6 @@ export default function MyPageEdit() {
         setBodyFat(String(physData.bodyfat));
       }
     })();
-
-    // セッション変更の監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          router.push('/signin');
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, [router]);
 
   // ─────────────────────────────────────────
@@ -197,7 +186,10 @@ export default function MyPageEdit() {
             />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label htmlFor="gender" style={{ display: "block", marginBottom: 8 }}>
+            <label
+              htmlFor="gender"
+              style={{ display: "block", marginBottom: 8 }}
+            >
               性別
             </label>
             <input
@@ -215,7 +207,10 @@ export default function MyPageEdit() {
             />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label htmlFor="height" style={{ display: "block", marginBottom: 8 }}>
+            <label
+              htmlFor="height"
+              style={{ display: "block", marginBottom: 8 }}
+            >
               身長
             </label>
             <input
@@ -233,7 +228,10 @@ export default function MyPageEdit() {
             />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label htmlFor="weight" style={{ display: "block", marginBottom: 8 }}>
+            <label
+              htmlFor="weight"
+              style={{ display: "block", marginBottom: 8 }}
+            >
               体重
             </label>
             <input
@@ -271,7 +269,9 @@ export default function MyPageEdit() {
               }}
             />
           </div>
-          {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+          {error && (
+            <div style={{ color: "red", marginBottom: 16 }}>{error}</div>
+          )}
           {success && (
             <div style={{ color: "green", marginBottom: 16 }}>{success}</div>
           )}

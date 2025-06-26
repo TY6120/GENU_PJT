@@ -105,13 +105,13 @@ export default function MyPage() {
     fetchUserData();
 
     // セッション変更の監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          router.push('/signin');
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_OUT") {
+        router.push("/signin");
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
     // router はリダイレクト用に依存関係に入れる。session を外したので空配列でも OK。

@@ -66,6 +66,7 @@
     - 編集内容は`shopping_list`テーブルに即時反映される。
 
 ## 仕様設計
+
 - https://docs.google.com/spreadsheets/d/1msx5gVZ0pvZp7j415ktE5ewMw2zvCkBNXt4rgQzte-Y/edit?gid=577430712#gid=577430712
 
 ## 技術スタック
@@ -86,9 +87,11 @@ https://www.figma.com/design/EaAs7sB4RjdhUJPBavAgas/Untitled?node-id=0-1&t=P3Z5a
 ![alt text](<supabase-schema-kdtwtajwlcuodjevrwxq (4).png>)
 
 ## デモURL
+
 https://genu-pjt-ynod.vercel.app/signin
 
 ## デモ用アカウント
+
 - ID：test2@gmail.com
 - PASS：123456
 

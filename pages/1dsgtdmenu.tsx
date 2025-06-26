@@ -39,9 +39,11 @@ export default function OneDayMenu() {
   useEffect(() => {
     async function fetchData() {
       // 認証チェック
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/signin');
+        router.push("/signin");
         return;
       }
 
@@ -153,17 +155,6 @@ export default function OneDayMenu() {
     }
 
     fetchData();
-
-    // セッション変更の監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          router.push('/signin');
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, [router.isReady, router.query, dayIndex, router]);
 
   return (
@@ -176,12 +167,14 @@ export default function OneDayMenu() {
       <NavigationBar />
 
       {loading ? (
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: "center", 
-          minHeight: "100vh" 
-        }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+          }}
+        >
           <p>認証中...</p>
         </div>
       ) : (
@@ -225,10 +218,14 @@ export default function OneDayMenu() {
                     marginBottom: 12,
                   }}
                 >
-                  <div style={{ fontWeight: "bold", fontSize: 18, minWidth: 60 }}>
+                  <div
+                    style={{ fontWeight: "bold", fontSize: 18, minWidth: 60 }}
+                  >
                     {meal.type}
                   </div>
-                  <div style={{ fontSize: 18, marginLeft: 24 }}>{meal.name}</div>
+                  <div style={{ fontSize: 18, marginLeft: 24 }}>
+                    {meal.name}
+                  </div>
                 </div>
 
                 {/* 材料 */}
@@ -270,7 +267,9 @@ export default function OneDayMenu() {
                     fontSize: 16,
                   }}
                 >
-                  <div style={{ fontWeight: "bold", minWidth: 60 }}>カロリー</div>
+                  <div style={{ fontWeight: "bold", minWidth: 60 }}>
+                    カロリー
+                  </div>
                   <div style={{ marginLeft: 24 }}>{meal.calories}kcal</div>
                 </div>
               </div>
