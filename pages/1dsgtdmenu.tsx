@@ -186,7 +186,20 @@ export default function OneDayMenu() {
             marginTop: 120,
           }}
         >
+          <style>{`
+            @media (max-width: 600px) {
+              .oneday-menu-detail-card {
+                width: 100% !important;
+                padding: 16px !important;
+                box-sizing: border-box !important;
+              }
+              .oneday-menu-title {
+                font-size: 24px !important;
+              }
+            }
+          `}</style>
           <h2
+            className="oneday-menu-title"
             style={{
               fontSize: 32,
               fontWeight: "bold",
@@ -199,6 +212,7 @@ export default function OneDayMenu() {
           </h2>
 
           <div
+            className="oneday-menu-detail-card"
             style={{
               background: "#fff",
               padding: 40,
