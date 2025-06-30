@@ -10,14 +10,9 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@headlessui/react": "^2.2.3",
-    "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.8",
     "bcryptjs": "^3.0.2",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "next": "^15.3.3",
-    "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
