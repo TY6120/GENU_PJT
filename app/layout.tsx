@@ -4,7 +4,7 @@ import NavigationBar from "@/components/NavigationBar";
 import React from "react";
 
 export const metadata = {
-  title: "GENU 献立自動作成アプリ",
+  title: "GENU",
   description: "ユーザーの身体情報や好みに基づいて献立を自動提案するWebアプリ",
 };
 
