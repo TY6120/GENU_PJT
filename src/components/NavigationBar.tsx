@@ -1,4 +1,5 @@
-import { useRouter } from "next/router";
+"use client";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function NavigationBar() {
@@ -16,8 +17,11 @@ export default function NavigationBar() {
         alert("ログアウトに失敗しました");
         return;
       }
-      // ログアウト成功後、サインインページへ遷移
-      router.push("/signin");
+      // ログアウト成功後、少し待機してからサインインページへ遷移
+      // これにより、セッション状態の更新を確実に待つ
+      setTimeout(() => {
+        router.push("/signin");
+      }, 100);
     } catch (error) {
       console.error("ログアウトエラー:", error);
       alert("ログアウトに失敗しました");
