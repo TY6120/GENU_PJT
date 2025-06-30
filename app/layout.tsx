@@ -1,5 +1,4 @@
 import "../src/app/globals.css";
-import Logo from "@/components/Logo";
 import NavigationBar from "@/components/NavigationBar";
 import React from "react";
 
