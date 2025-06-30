@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Logo from "@/components/Logo";
 
 export default function NavigationBar() {
   const router = useRouter();
@@ -81,7 +82,10 @@ export default function NavigationBar() {
           }
         }
       `}</style>
-      <div className="nav-bar-genu-wrapper" style={navWrapperStyle}>
+      <div className="nav-bar-genu-wrapper" style={{ ...navWrapperStyle, justifyContent: "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", marginRight: "auto", marginLeft: 0, paddingLeft: 0 }}>
+          <Logo />
+        </div>
         <div className="nav-bar-genu-group" style={groupStyle}>
           <button
             style={buttonStyle}

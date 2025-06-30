@@ -16,9 +16,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body style={{ minHeight: "100vh", background: "#fff" }}>
-        <div style={{ position: "absolute", top: 40, left: 40 }}>
+        {/* <div style={{ position: "absolute", top: 40, left: 40 }}>
           <Logo />
-        </div>
+        </div> */}
         <NavigationBar />
         {children}
       </body>
