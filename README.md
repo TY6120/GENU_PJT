@@ -88,7 +88,7 @@ https://www.figma.com/design/EaAs7sB4RjdhUJPBavAgas/Untitled?node-id=0-1&t=P3Z5a
 
 ## デモURL
 
-https://genu-pjt-ynod.vercel.app/signin
+https://genu-pjt-6xzj-84cgoz0tb-ty6120s-projects.vercel.app/signin
 
 ## デモ用アカウント
 
