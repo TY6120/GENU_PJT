@@ -170,9 +170,22 @@ function OneDayMenuInner() {
 
         setMeals(newMeals);
         setErrorMessage("");
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 認証エラーの場合のみログイン画面へ
-        if (error?.message?.includes("認証") || error?.status === 401) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof (error as { message?: unknown }).message === "string" &&
+          (error as { message: string }).message.includes("認証")
+        ) {
+          router.push("/signin");
+        } else if (
+          typeof error === "object" &&
+          error !== null &&
+          "status" in error &&
+          (error as { status?: unknown }).status === 401
+        ) {
           router.push("/signin");
         } else {
           setErrorMessage("データ取得中にエラーが発生しました。");
