@@ -30,6 +30,7 @@ function OneDayMenuInner() {
   const [day, setDay] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const dayIndex = useMemo<Record<string, number>>(
     () => ({
@@ -70,6 +71,7 @@ function OneDayMenuInner() {
           .single();
         if (planErr || !plan) {
           console.error("プラン取得エラー", planErr);
+          setErrorMessage("プランが見つかりませんでした。");
           return;
         }
         const planId = plan.id;
@@ -91,8 +93,15 @@ function OneDayMenuInner() {
           .eq("plan_id", planId)
           .eq("day_of_week", dayIndex[dayParam])
           .order("meal_type", { ascending: true });
-        if (itemsErr || !items) {
+        if (itemsErr) {
           console.error("項目取得エラー", itemsErr);
+          setErrorMessage("メニューがまだ作成されていません。");
+          setMeals([]);
+          return;
+        }
+        if (!items || items.length === 0) {
+          setErrorMessage("メニューがまだ作成されていません。");
+          setMeals([]);
           return;
         }
 
@@ -160,9 +169,14 @@ function OneDayMenuInner() {
         });
 
         setMeals(newMeals);
-      } catch (error) {
-        console.error("認証エラー:", error);
-        router.push("/signin");
+        setErrorMessage("");
+      } catch (error: any) {
+        // 認証エラーの場合のみログイン画面へ
+        if (error?.message?.includes("認証") || error?.status === 401) {
+          router.push("/signin");
+        } else {
+          setErrorMessage("データ取得中にエラーが発生しました。");
+        }
       } finally {
         setLoading(false);
       }
@@ -198,6 +212,41 @@ function OneDayMenuInner() {
           }}
         >
           <p>認証中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // エラーメッセージがある場合は表示
+  if (errorMessage) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fff" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+          }}
+        >
+          <p style={{ color: "red", fontSize: 20 }}>{errorMessage}</p>
+          <button
+            onClick={() => router.push("/1wsgtdmenu")}
+            style={{
+              marginTop: 24,
+              background: "#6b9e3d",
+              color: "#fff",
+              fontWeight: "bold",
+              fontSize: 18,
+              padding: "10px 24px",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            1週間分のメニューへ戻る
+          </button>
         </div>
       </div>
     );
