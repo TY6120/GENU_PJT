@@ -1,6 +1,6 @@
-import "../src/app/globals.css";
-import NavigationBar from "@/components/NavigationBar";
+import "./globals.css";
 import React from "react";
+import ClientLayout from "./ClientLayout";
 
 export const metadata = {
   title: "GENU",
@@ -15,11 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body style={{ minHeight: "100vh", background: "#fff" }}>
-        {/* <div style={{ position: "absolute", top: 40, left: 40 }}>
-          <Logo />
-        </div> */}
-        <NavigationBar />
-        {children}
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );
