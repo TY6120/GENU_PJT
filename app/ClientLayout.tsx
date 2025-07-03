@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import NavigationBar from "@/components/NavigationBar";
+import NavigationBar from "./components/NavigationBar";
 import React from "react";
 
 export default function ClientLayout({

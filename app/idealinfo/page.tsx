@@ -1,52 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 export default function IdealInfo() {
+  const { user: authUser, loading } = useAuth();
   const [weight, setWeight] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuthAndFetch = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          router.push("/signin");
-          return;
-        }
-        setIsAuthenticated(true);
-        await fetchIdeal();
-      } catch (error) {
-        console.error("認証エラー:", error);
-        router.push("/signin");
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuthAndFetch();
-
-    // セッション変更の監視
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        setIsAuthenticated(false);
-        router.push("/signin");
-      } else if (session) {
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
+    if (!authUser) return;
+    fetchIdeal();
+  }, [authUser]);
 
   const fetchIdeal = async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -121,7 +90,7 @@ export default function IdealInfo() {
   };
 
   // ローディング中または未認証の場合はローディング画面を表示
-  if (loading || !isAuthenticated) {
+  if (loading || !authUser) {
     return (
       <div style={{ minHeight: "100vh", background: "#fff" }}>
         <div

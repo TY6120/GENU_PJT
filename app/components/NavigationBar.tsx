@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import Logo from "@/components/Logo";
+import { supabase } from "../lib/supabase";
+import Logo from "../components/Logo";
 
 export default function NavigationBar() {
   const router = useRouter();

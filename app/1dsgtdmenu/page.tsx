@@ -1,7 +1,8 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useMemo } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 type Meal = {
   type: "朝食" | "昼食" | "夕食";
@@ -22,14 +23,13 @@ export default function OneDayMenu() {
 function OneDayMenuInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user: authUser, loading } = useAuth();
   const [meals, setMeals] = useState<Meal[]>([
     { type: "朝食", name: "", ingredients: "", steps: [], calories: 0 },
     { type: "昼食", name: "", ingredients: "", steps: [], calories: 0 },
     { type: "夕食", name: "", ingredients: "", steps: [], calories: 0 },
   ]);
   const [day, setDay] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const dayIndex = useMemo<Record<string, number>>(
@@ -46,18 +46,9 @@ function OneDayMenuInner() {
   );
 
   useEffect(() => {
+    if (!authUser) return;
     async function fetchData() {
       try {
-        // 認証チェック
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          router.push("/signin");
-          return;
-        }
-        setIsAuthenticated(true);
-
         const dayParam = searchParams?.get("day");
         if (!dayParam) return;
         setDay(dayParam);
@@ -190,30 +181,14 @@ function OneDayMenuInner() {
         } else {
           setErrorMessage("データ取得中にエラーが発生しました。");
         }
-      } finally {
-        setLoading(false);
       }
     }
 
     fetchData();
-
-    // セッション変更の監視
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        setIsAuthenticated(false);
-        router.push("/signin");
-      } else if (session) {
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [searchParams, dayIndex, router]);
+  }, [authUser, searchParams, dayIndex, router]);
 
   // ローディング中または未認証の場合はローディング画面を表示
-  if (loading || !isAuthenticated) {
+  if (loading || !authUser) {
     return (
       <div style={{ minHeight: "100vh", background: "#fff" }}>
         <div

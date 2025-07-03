@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 export default function MyPageEdit() {
+  const { user: authUser, loading } = useAuth();
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [height, setHeight] = useState("");
@@ -11,25 +13,12 @@ export default function MyPageEdit() {
   const [bodyFat, setBodyFat] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    if (!authUser) return;
     (async () => {
       try {
-        const {
-          data: { user: authUser },
-          error: getUserError,
-        } = await supabase.auth.getUser();
-
-        if (getUserError || !authUser) {
-          setError("ログイン情報の取得に失敗しました");
-          router.push("/signin");
-          return;
-        }
-
-        setIsAuthenticated(true);
         const userId = authUser.id;
 
         const { data: physData, error: physError } = await supabase
@@ -53,30 +42,12 @@ export default function MyPageEdit() {
       } catch (error) {
         console.error("認証エラー:", error);
         router.push("/signin");
-      } finally {
-        setLoading(false);
       }
     })();
-  }, [router]);
-
-  // セッション変更の監視
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        setIsAuthenticated(false);
-        router.push("/signin");
-      } else if (session) {
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
+  }, [authUser, router]);
 
   // ローディング中または未認証の場合はローディング画面を表示
-  if (loading || !isAuthenticated) {
+  if (loading || !authUser) {
     return (
       <div style={{ minHeight: "100vh", background: "#fff" }}>
         <div
@@ -99,14 +70,6 @@ export default function MyPageEdit() {
     setSuccess("");
     if (!age || !gender || !height || !weight || !bodyFat) {
       setError("全ての項目を入力してください");
-      return;
-    }
-    const {
-      data: { user: authUser },
-      error: getUserError,
-    } = await supabase.auth.getUser();
-    if (getUserError || !authUser) {
-      setError("ログイン情報の取得に失敗しました");
       return;
     }
     const userId = authUser.id;

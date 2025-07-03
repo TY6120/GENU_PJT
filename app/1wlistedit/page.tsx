@@ -1,14 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../hooks/useAuth";
 
 type Item = { id: string; name: string; unit: string; quantity: number };
 
 export default function ShoppingListEdit() {
+  const { user: authUser, loading } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   // 一覧取得
@@ -48,40 +48,9 @@ export default function ShoppingListEdit() {
   };
 
   useEffect(() => {
-    const checkAuthAndFetch = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          router.push("/signin");
-          return;
-        }
-        setIsAuthenticated(true);
-        await fetchList();
-      } catch (error) {
-        console.error("認証エラー:", error);
-        router.push("/signin");
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuthAndFetch();
-
-    // セッション変更の監視
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        setIsAuthenticated(false);
-        router.push("/signin");
-      } else if (session) {
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
+    if (!authUser) return;
+    fetchList();
+  }, [authUser]);
 
   const handleDelete = async (id: string) => {
     await supabase.from("shopping_list").delete().eq("id", id);
@@ -99,7 +68,7 @@ export default function ShoppingListEdit() {
   };
 
   // ローディング中または未認証の場合はローディング画面を表示
-  if (loading || !isAuthenticated) {
+  if (loading || !authUser) {
     return (
       <div style={{ minHeight: "100vh", background: "#fff" }}>
         <div

@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 export default function MyPage() {
+  const { user: authUser, loading } = useAuth();
   // state の初期値は「何も登録されていない → 0 や空文字」で OK
   const [user, setUser] = useState({
     age: 0,
@@ -16,12 +18,11 @@ export default function MyPage() {
     weight: 0,
     bodyFat: 0,
   });
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!authUser) return;
       try {
         // ───────────────────────────────────────────────────
         // ① Supabase Auth の現在ログイン中セッションを取得
@@ -34,8 +35,6 @@ export default function MyPage() {
           router.push("/signin");
           return;
         }
-
-        setIsAuthenticated(true);
 
         // 以降、「supabase.auth.signInWithPassword」でログインしたユーザーの情報を使う
         const authUser = user; // { id: string; email: string; … }
@@ -108,31 +107,14 @@ export default function MyPage() {
       } catch (error) {
         console.error("認証エラー:", error);
         router.push("/signin");
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchUserData();
-
-    // セッション変更の監視
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        setIsAuthenticated(false);
-        router.push("/signin");
-      } else if (session) {
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-    // router はリダイレクト用に依存関係に入れる。session を外したので空配列でも OK。
-  }, [router]);
+  }, [authUser, router]);
 
   // ローディング中または未認証の場合はローディング画面を表示
-  if (loading || !isAuthenticated) {
+  if (loading || !authUser) {
     return (
       <div style={{ minHeight: "100vh", background: "#fff" }}>
         <div

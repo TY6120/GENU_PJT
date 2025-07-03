@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import type { Session } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 
 const WEEKDAYS_JP = [
   "月曜日",
@@ -65,15 +65,12 @@ async function updateShoppingList(planId: string, userId: string) {
 
 export default function OneWeekMenu() {
   const router = useRouter();
+  const { user: authUser, loading } = useAuth();
   const [menus, setMenus] = useState<DayMenu[]>([]);
-  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [planId, setPlanId] = useState("");
-  const [session, setSession] = useState<Session | null>(null);
 
   const fetchMenus = async (userId: string) => {
-    setLoading(true);
-    setErrorMessage("");
     const { data: plan, error: planErr } = await supabase
       .from("meal_plans")
       .select("id")
@@ -101,7 +98,6 @@ export default function OneWeekMenu() {
           .select();
         if (createPlanErr || !newPlans || newPlans.length === 0) {
           setErrorMessage("初期プランの作成に失敗しました。");
-          setLoading(false);
           return;
         }
         const newPlan = newPlans[0];
@@ -114,12 +110,10 @@ export default function OneWeekMenu() {
           kcal: 0,
         }));
         setMenus(emptyMenus);
-        setLoading(false);
         return;
       } catch (error) {
         console.error("初期プラン作成エラー:", error);
         setErrorMessage("初期プランの作成に失敗しました。");
-        setLoading(false);
         return;
       }
     }
@@ -138,7 +132,6 @@ export default function OneWeekMenu() {
       .order("meal_type", { ascending: true });
     if (itemsErr || !items) {
       setErrorMessage("メニューアイテムの取得に失敗しました。");
-      setLoading(false);
       return;
     }
     const tmp: Record<number, DayMenu> = {};
@@ -162,52 +155,28 @@ export default function OneWeekMenu() {
       dm.kcal += rec.calories;
     });
     setMenus([tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6]]);
-    setLoading(false);
   };
 
   useEffect(() => {
-    const getSessionAndFetch = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setSession(session);
-      if (session) {
-        await fetchMenus(session.user.id);
-      } else {
-        setLoading(false);
-        router.push("/signin");
-        return;
-      }
-    };
-    getSessionAndFetch();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        router.push("/signin");
-      } else if (session) {
-        setSession(session);
-        await fetchMenus(session.user.id);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [router]);
+    if (!authUser) return;
+    fetchMenus(authUser.id);
+  }, [authUser]);
 
   const handleReset = async () => {
-    if (!planId || !session?.user.id) return;
+    if (!planId || !authUser?.id) return;
     if (!confirm("本当にメニューをリセットしますか？")) return;
     try {
       const { error: resetErr } = await supabase
         .from("shopping_list")
         .update({ checked: false })
-        .eq("user_id", session.user.id);
+        .eq("user_id", authUser.id);
       if (resetErr) throw resetErr;
       const { error: rpcErr } = await supabase.rpc("reset_and_randomize_week", {
         p_plan_id: planId,
       });
       if (rpcErr) throw rpcErr;
-      await fetchMenus(session.user.id);
-      await updateShoppingList(planId, session.user.id);
+      await fetchMenus(authUser.id);
+      await updateShoppingList(planId, authUser.id);
     } catch (e: unknown) {
       console.error(e);
       const message = e instanceof Error ? e.message : String(e);
@@ -215,8 +184,9 @@ export default function OneWeekMenu() {
     }
   };
 
-  if (loading)
-    return <p style={{ textAlign: "center", marginTop: 100 }}>読み込み中…</p>;
+  if (loading || !authUser) {
+    return <p style={{ textAlign: "center", marginTop: 100 }}>認証中…</p>;
+  }
   if (errorMessage)
     return (
       <p style={{ color: "red", textAlign: "center", marginTop: 100 }}>
