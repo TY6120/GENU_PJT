@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -12,40 +12,35 @@ export default function IdealInfo() {
   const [success, setSuccess] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
+  const fetchIdeal = useCallback(async () => {
     if (!authUser) return;
-    fetchIdeal();
-  }, [authUser]);
-
-  const fetchIdeal = async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) return;
 
     const { data, error } = await supabase
       .from("idealphysical_infos")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", authUser.id)
       .single();
 
     if (!error && data) {
       setWeight(data.weight?.toString() ?? "");
       setBodyFat(data.bodyfat?.toString() ?? "");
     }
-  };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    fetchIdeal();
+  }, [authUser, fetchIdeal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    // Supabase Authから直接ユーザー情報を取得
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
+    if (!authUser) {
       setError("ユーザーIDの取得に失敗しました");
       return;
     }
-    const userId = userData.user.id;
 
     if (!weight || !bodyFat) {
       setError("全ての項目を入力してください");
@@ -57,7 +52,7 @@ export default function IdealInfo() {
     const { data: exist } = await supabase
       .from("idealphysical_infos")
       .select("id")
-      .eq("user_id", userId)
+      .eq("user_id", authUser.id)
       .single();
     if (exist) {
       // update
@@ -68,12 +63,12 @@ export default function IdealInfo() {
           bodyfat: Number(bodyFat),
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", userId);
+        .eq("user_id", authUser.id);
     } else {
       // insert
       result = await supabase.from("idealphysical_infos").insert([
         {
-          user_id: userId,
+          user_id: authUser.id,
           weight: Number(weight),
           bodyfat: Number(bodyFat),
           created_at: new Date().toISOString(),

@@ -25,22 +25,7 @@ export default function MyPage() {
       if (!authUser) return;
       try {
         // ───────────────────────────────────────────────────
-        // ① Supabase Auth の現在ログイン中セッションを取得
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        // 未ログイン or session.user が取れない場合はサインインへリダイレクト
-        if (!user) {
-          router.push("/signin");
-          return;
-        }
-
-        // 以降、「supabase.auth.signInWithPassword」でログインしたユーザーの情報を使う
-        const authUser = user; // { id: string; email: string; … }
-
-        // ───────────────────────────────────────────────────
-        // ② public.users テーブルから id(uuid) を取得
+        // ① public.users テーブルから id(uuid) を取得
         //    signup.tsx / signin.tsx の段階で必ず users テーブルにレコードを入れている想定
         const { data: userRow, error: userError } = await supabase
           .from("users")
@@ -59,7 +44,7 @@ export default function MyPage() {
 
         try {
           // ───────────────────────────────────────────────────
-          // ③ currentphysical_infos テーブルから「現在の身体情報」を取得
+          // ② currentphysical_infos テーブルから「現在の身体情報」を取得
           const { data: bodyData, error: bodyError } = await supabase
             .from("currentphysical_infos")
             .select("*")
@@ -83,7 +68,7 @@ export default function MyPage() {
           }
 
           // ───────────────────────────────────────────────────
-          // ④ idealphysical_infos テーブルから「理想の身体情報」を取得
+          // ③ idealphysical_infos テーブルから「理想の身体情報」を取得
           const { data: idealData, error: idealError } = await supabase
             .from("idealphysical_infos")
             .select("*")

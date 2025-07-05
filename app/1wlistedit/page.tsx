@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
@@ -12,15 +12,13 @@ export default function ShoppingListEdit() {
   const router = useRouter();
 
   // 一覧取得
-  const fetchList = async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) return;
+  const fetchList = useCallback(async () => {
+    if (!authUser) return;
 
     const { data, error } = await supabase
       .from("shopping_list")
       .select("id, quantity, ingredient:ingredient_id(name, unit)")
-      .eq("user_id", userId);
+      .eq("user_id", authUser.id);
     if (error) return console.error(error);
 
     setItems(
@@ -45,12 +43,12 @@ export default function ShoppingListEdit() {
         };
       }),
     );
-  };
+  }, [authUser]);
 
   useEffect(() => {
     if (!authUser) return;
     fetchList();
-  }, [authUser]);
+  }, [authUser, fetchList]);
 
   const handleDelete = async (id: string) => {
     await supabase.from("shopping_list").delete().eq("id", id);
