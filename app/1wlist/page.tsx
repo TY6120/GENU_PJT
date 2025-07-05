@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
@@ -24,38 +24,23 @@ export default function ShoppingList() {
   const [items, setItems] = useState<Item[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    if (!authUser) return;
-    fetchList();
-  }, [authUser]);
-
   /** Supabase から買い物リストを取得して state にセット */
-  const fetchList = async () => {
-    // 1) ログインユーザー取得
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabase.auth.getUser();
-    if (userErr) {
-      console.error("getUser error:", userErr);
-      return;
-    }
-    const userId = user?.id;
-    if (!userId) return;
+  const fetchList = useCallback(async () => {
+    if (!authUser) return;
 
-    // 2) shopping_list と ingredients を JOIN
+    // shopping_list と ingredients を JOIN
     const { data, error } = await supabase
       .from("shopping_list")
       // ingredient_id → ingredients テーブルを参照、alias を ingredient にしています
       .select("id, quantity, checked, ingredient:ingredient_id(name, unit)")
-      .eq("user_id", userId);
+      .eq("user_id", authUser.id);
 
     if (error) {
       console.error("shopping_list fetch error:", error);
       return;
     }
 
-    // 3) 配列の先頭要素から name/unit を取り出す
+    // 配列の先頭要素から name/unit を取り出す
     const mapped = (data ?? []).map((row: ShoppingListRow) => {
       const rec = Array.isArray(row.ingredient)
         ? (row.ingredient[0] ?? { name: "", unit: "" })
@@ -70,7 +55,12 @@ export default function ShoppingList() {
     });
 
     setItems(mapped);
-  };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    fetchList();
+  }, [authUser, fetchList]);
 
   const handleCheck = async (id: string, checked: boolean) => {
     // Supabaseにchecked状態を保存
